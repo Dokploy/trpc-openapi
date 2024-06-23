@@ -1,6 +1,6 @@
 {
   "name": "@dokploy/trpc-openapi",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "tRPC OpenAPI",
   "author": "Mauricio Siu <siumauricio@hotmail.com>",
   "private": false,
@@ -26,7 +26,8 @@
   ],
   "scripts": {
     "test": "tsc --noEmit && jest --verbose",
-    "build": "rimraf dist && tsc -p tsconfig.build.json"
+    "build": "rimraf dist && tsc -p tsconfig.build.json",
+    "publish": "pnpm run build && pnpm publish --access public"
   },
   "peerDependencies": {
     "@trpc/server": "^10.0.0",
