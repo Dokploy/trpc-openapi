@@ -20,7 +20,6 @@ export const getOpenApiPathsObject = (
 ): OpenAPIV3.PathsObject => {
 	const pathsObject: OpenAPIV3.PathsObject = {};
 	const procedures = appRouter._def.procedures as OpenApiProcedureRecord;
-
 	forEachOpenApiProcedure(
 		procedures,
 		({ path: procedurePath, type, procedure, openapi }) => {
@@ -112,7 +111,7 @@ export const getOpenApiPathsObject = (
 							openapi.example?.response,
 							openapi.responseHeaders,
 						),
-						// ...(openapi.deprecated ? { deprecated: openapi.deprecated } : {}),
+						...(openapi.deprecated ? { deprecated: openapi.deprecated } : {}),
 					},
 				};
 			} catch (error: any) {

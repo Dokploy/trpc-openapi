@@ -1,6 +1,6 @@
 {
   "name": "@dokploy/trpc-openapi",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "description": "tRPC OpenAPI",
   "author": "Mauricio Siu <siumauricio@hotmail.com>",
   "private": false,
@@ -13,9 +13,9 @@
     "openapi",
     "swagger"
   ],
-  "homepage": "https://github.com/jlalmes/trpc-openapi",
-  "repository": "github:jlalmes/trpc-openapi",
-  "bugs": "https://github.com/jlalmes/trpc-openapi/issues",
+  "homepage": "https://github.com/dokploy/trpc-openapi",
+  "repository": "github:dokploy/trpc-openapi",
+  "bugs": "https://github.com/dokploy/trpc-openapi/issues",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "workspaces": [
@@ -23,6 +23,11 @@
     "examples/with-nextjs",
     "examples/with-express",
     "examples/with-interop"
+  ],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "test": "tsc --noEmit && jest --verbose",

@@ -68,6 +68,7 @@ const authRouter = t.router({
 	register: publicProcedure
 		.meta({
 			openapi: {
+				additional: true,
 				method: "POST",
 				path: "/auth/register",
 				tags: ["auth"],
@@ -84,15 +85,15 @@ const authRouter = t.router({
 				name: z.string().min(3),
 			}),
 		)
-		.output(
-			z.object({
-				user: z.object({
-					id: z.string().uuid(),
-					email: z.string().email(),
-					name: z.string().min(3),
-				}),
-			}),
-		)
+		// .output(
+		// 	z.object({
+		// 		user: z.object({
+		// 			id: z.string().uuid(),
+		// 			email: z.string().email(),
+		// 			name: z.string().min(3),
+		// 		}),
+		// 	}),
+		// )
 		.mutation(({ input }) => {
 			let user = database.users.find((_user) => _user.email === input.email);
 
@@ -114,117 +115,117 @@ const authRouter = t.router({
 
 			return { user: { id: user.id, email: user.email, name: user.name } };
 		}),
-	login: publicProcedure
-		.meta({
-			openapi: {
-				method: "POST",
-				path: "/auth/login",
-				tags: ["auth"],
-				summary: "Login as an existing user",
-			},
-		})
-		.input(
-			z.object({
-				email: z.string().email(),
-				passcode: z.preprocess(
-					(arg) => (typeof arg === "string" ? parseInt(arg) : arg),
-					z.number().min(1000).max(9999),
-				),
-			}),
-		)
-		.output(
-			z.object({
-				token: z.string(),
-			}),
-		)
-		.mutation(({ input }) => {
-			const user = database.users.find((_user) => _user.email === input.email);
+	// 	login: publicProcedure
+	// 		.meta({
+	// 			openapi: {
+	// 				method: "POST",
+	// 				path: "/auth/login",
+	// 				tags: ["auth"],
+	// 				summary: "Login as an existing user",
+	// 			},
+	// 		})
+	// 		.input(
+	// 			z.object({
+	// 				email: z.string().email(),
+	// 				passcode: z.preprocess(
+	// 					(arg) => (typeof arg === "string" ? parseInt(arg) : arg),
+	// 					z.number().min(1000).max(9999),
+	// 				),
+	// 			}),
+	// 		)
+	// 		.output(
+	// 			z.object({
+	// 				token: z.string(),
+	// 			}),
+	// 		)
+	// 		.mutation(({ input }) => {
+	// 			const user = database.users.find((_user) => _user.email === input.email);
 
-			if (!user) {
-				throw new TRPCError({
-					message: "User with email not found",
-					code: "UNAUTHORIZED",
-				});
-			}
-			if (user.passcode !== input.passcode) {
-				throw new TRPCError({
-					message: "Passcode was incorrect",
-					code: "UNAUTHORIZED",
-				});
-			}
+	// 			if (!user) {
+	// 				throw new TRPCError({
+	// 					message: "User with email not found",
+	// 					code: "UNAUTHORIZED",
+	// 				});
+	// 			}
+	// 			if (user.passcode !== input.passcode) {
+	// 				throw new TRPCError({
+	// 					message: "Passcode was incorrect",
+	// 					code: "UNAUTHORIZED",
+	// 				});
+	// 			}
 
-			return {
-				token: jwt.sign(user.id, jwtSecret),
-			};
-		}),
-});
+	// 			return {
+	// 				token: jwt.sign(user.id, jwtSecret),
+	// 			};
+	// 		}),
+	// });
 
-const usersRouter = t.router({
-	getUsers: publicProcedure
-		.meta({
-			openapi: {
-				method: "GET",
-				path: "/users",
-				tags: ["users"],
-				summary: "Read all users",
-			},
-		})
-		// .input(z.void())
-		// .output(
-		// 	z.object({
-		// 		users: z.array(
-		// 			z.object({
-		// 				id: z.string().uuid(),
-		// 				email: z.string().email(),
-		// 				name: z.string(),
-		// 			}),
-		// 		),
-		// 	}),
-		// )
-		.query(() => {
-			const users = database.users.map((user) => ({
-				id: user.id,
-				email: user.email,
-				name: user.name,
-			}));
+	// const usersRouter = t.router({
+	// 	getUsers: publicProcedure
+	// 		.meta({
+	// 			openapi: {
+	// 				method: "GET",
+	// 				path: "/users",
+	// 				tags: ["users"],
+	// 				summary: "Read all users",
+	// 			},
+	// 		})
+	// 		// .input(z.void())
+	// 		// .output(
+	// 		// 	z.object({
+	// 		// 		users: z.array(
+	// 		// 			z.object({
+	// 		// 				id: z.string().uuid(),
+	// 		// 				email: z.string().email(),
+	// 		// 				name: z.string(),
+	// 		// 			}),
+	// 		// 		),
+	// 		// 	}),
+	// 		// )
+	// 		.query(() => {
+	// 			const users = database.users.map((user) => ({
+	// 				id: user.id,
+	// 				email: user.email,
+	// 				name: user.name,
+	// 			}));
 
-			return { users };
-		}),
-	getUserById: publicProcedure
-		.meta({
-			openapi: {
-				method: "GET",
-				path: "/users/{id}",
-				tags: ["users"],
-				summary: "Read a user by id",
-			},
-		})
-		.input(
-			z.object({
-				id: z.string().uuid(),
-			}),
-		)
-		.output(
-			z.object({
-				user: z.object({
-					id: z.string().uuid(),
-					email: z.string().email(),
-					name: z.string(),
-				}),
-			}),
-		)
-		.query(({ input }) => {
-			const user = database.users.find((_user) => _user.id === input.id);
+	// 			return { users };
+	// 		}),
+	// 	getUserById: publicProcedure
+	// 		.meta({
+	// 			openapi: {
+	// 				method: "GET",
+	// 				path: "/users/{id}",
+	// 				tags: ["users"],
+	// 				summary: "Read a user by id",
+	// 			},
+	// 		})
+	// 		.input(
+	// 			z.object({
+	// 				id: z.string().uuid(),
+	// 			}),
+	// 		)
+	// 		.output(
+	// 			z.object({
+	// 				user: z.object({
+	// 					id: z.string().uuid(),
+	// 					email: z.string().email(),
+	// 					name: z.string(),
+	// 				}),
+	// 			}),
+	// 		)
+	// 		.query(({ input }) => {
+	// 			const user = database.users.find((_user) => _user.id === input.id);
 
-			if (!user) {
-				throw new TRPCError({
-					message: "User not found",
-					code: "NOT_FOUND",
-				});
-			}
+	// 			if (!user) {
+	// 				throw new TRPCError({
+	// 					message: "User not found",
+	// 					code: "NOT_FOUND",
+	// 				});
+	// 			}
 
-			return { user };
-		}),
+	// 			return { user };
+	// 		}),
 });
 
 const postsRouter = t.router({
@@ -418,8 +419,8 @@ const postsRouter = t.router({
 
 export const appRouter = t.router({
 	auth: authRouter,
-	users: usersRouter,
-	posts: postsRouter,
+	// users: usersRouter,
+	// posts: postsRouter,
 });
 
 export type AppRouter = typeof appRouter;
