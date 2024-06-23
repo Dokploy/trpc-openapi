@@ -68,6 +68,7 @@ const authRouter = t.router({
 	register: publicProcedure
 		.meta({
 			openapi: {
+				additional: true,
 				method: "POST",
 				path: "/auth/register",
 				tags: ["auth"],
@@ -84,15 +85,15 @@ const authRouter = t.router({
 				name: z.string().min(3),
 			}),
 		)
-		.output(
-			z.object({
-				user: z.object({
-					id: z.string().uuid(),
-					email: z.string().email(),
-					name: z.string().min(3),
-				}),
-			}),
-		)
+		// .output(
+		// 	z.object({
+		// 		user: z.object({
+		// 			id: z.string().uuid(),
+		// 			email: z.string().email(),
+		// 			name: z.string().min(3),
+		// 		}),
+		// 	}),
+		// )
 		.mutation(({ input }) => {
 			let user = database.users.find((_user) => _user.email === input.email);
 

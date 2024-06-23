@@ -32,7 +32,7 @@ export const getParameterObjects = (
 	inType: "all" | "path" | "query",
 	example: Record<string, any> | undefined,
 ): OpenAPIV3.ParameterObject[] | undefined => {
-	const schema = currentSchema ?? z.void();
+	const schema = currentSchema || z.void();
 	const isRequired = !schema.isOptional();
 	const unwrappedSchema = unwrapZodType(schema, true);
 
@@ -130,7 +130,7 @@ export const getRequestBodyObject = (
 	// 	});
 	// }
 
-	const schema = currentSchema ?? z.void();
+	const schema = currentSchema || z.void();
 
 	const isRequired = !schema.isOptional();
 	const unwrappedSchema = unwrapZodType(schema, true);

@@ -4,6 +4,7 @@ import { AnyZodObject, z } from "zod";
 
 import {
 	OpenApiMeta,
+	OpenApiMethod,
 	OpenApiProcedure,
 	OpenApiProcedureRecord,
 } from "../types";
@@ -31,6 +32,10 @@ const getProcedureType = (procedure: OpenApiProcedure): ProcedureType => {
 	throw new Error("Unknown procedure type");
 };
 
+export const getMethod = (procedure: OpenApiProcedure): OpenApiMethod => {
+	return getProcedureType(procedure) === "query" ? "GET" : "POST";
+};
+
 export const forEachOpenApiProcedure = (
 	procedureRecord: OpenApiProcedureRecord,
 	callback: (values: {
@@ -41,28 +46,28 @@ export const forEachOpenApiProcedure = (
 	}) => void,
 ) => {
 	for (const [path, procedure] of Object.entries(procedureRecord)) {
-		console.log(procedure, path);
-		const { openapi } = procedure._def.meta ?? {
-			openapi: {
-				method: getProcedureType(procedure) === "query" ? "GET" : "POST",
-				path: path,
-				enabled: procedure?._def?.meta ?? true,
-				tags: [path.split(".")[0]],
-				contentTypes: ["application/json"],
-				summary: "",
-				description: "",
-				example: {
-					request: {},
-					response: {},
-				},
-				responseHeaders: [],
-				deprecated: false,
-				headers: [],
-				protect: false,
-			},
+		const additional = procedure._def.meta?.openapi?.additional ?? false;
+		const override = procedure._def.meta?.openapi?.override ?? false;
+		const defaultOpenApiMeta = {
+			method: getMethod(procedure),
+			path: path,
+			enabled: true,
+			tags: [path.split(".")[0]],
+			protect: true,
 		};
+		let openapi: OpenApiMeta;
+
+		if (override) {
+			openapi = { ...procedure._def.meta?.openapi };
+		} else if (additional) {
+			openapi = { ...defaultOpenApiMeta, ...procedure._def.meta?.openapi };
+		} else {
+			openapi = { ...procedure._def.meta?.openapi, ...defaultOpenApiMeta };
+		}
+
 		if (openapi && openapi.enabled !== false) {
 			const type = getProcedureType(procedure);
+			// @ts-ignore
 			callback({ path, type, procedure, openapi });
 		}
 	}

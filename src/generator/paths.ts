@@ -111,7 +111,7 @@ export const getOpenApiPathsObject = (
 							openapi.example?.response,
 							openapi.responseHeaders,
 						),
-						// ...(openapi.deprecated ? { deprecated: openapi.deprecated } : {}),
+						...(openapi.deprecated ? { deprecated: openapi.deprecated } : {}),
 					},
 				};
 			} catch (error: any) {
