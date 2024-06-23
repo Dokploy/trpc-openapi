@@ -398,7 +398,6 @@ const postsRouter = t.router({
 		.output(z.null())
 		.mutation(({ input, ctx }) => {
 			const post = database.posts.find((_post) => _post.id === input.id);
-			console.log(post);
 			if (!post) {
 				throw new TRPCError({
 					message: "Post not found",
