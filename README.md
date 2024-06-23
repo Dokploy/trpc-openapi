@@ -9,37 +9,51 @@
   <hr />
 </div>
 
-#### `trpc-openapi` is maintained by ProsePilot - simple, fast and free online [writing tools](https://www.prosepilot.com/tools).
 
----
 
 ## **[OpenAPI](https://swagger.io/specification/) support for [tRPC](https://trpc.io/)** 🧩
+
+
+# Note
+
+We use this package to generate OpenAPI documents for our tRPC endpoints in https://github.com/Dokploy/dokploy
+
+We make some changes to make input, output and meta parameters be optional by default.
+
+1. We make optional input and output parameters required by default.
+2. We make .meta optional for all procedures.
+3. Introduce 2 flags to .meta() to override and additional parameters.
+4. `override` parameter overrides the default value and will take the whole object of openapi.
+5. `additional` parameters will be default values + the values provided in the openapi object.
+
+
+## Usage
 
 - Easy REST endpoints for your tRPC procedures.
 - Perfect for incremental adoption.
 - OpenAPI version 3.0.3.
 
-## Usage
-
-**1. Install `trpc-openapi`.**
+**1. Install `@dokploy/trpc-openapi`.**
 
 ```bash
 # npm
-npm install trpc-openapi
+npm install @dokploy/trpc-openapi
 # yarn
-yarn add trpc-openapi
+yarn add @dokploy/trpc-openapi
 ```
 
 **2. Add `OpenApiMeta` to your tRPC instance.**
 
 ```typescript
 import { initTRPC } from '@trpc/server';
-import { OpenApiMeta } from 'trpc-openapi';
+import { OpenApiMeta } from '@dokploy/trpc-openapi';
 
 const t = initTRPC.meta<OpenApiMeta>().create(); /* 👈 */
 ```
 
 **3. Enable `openapi` support for a procedure.**
+
+
 
 ```typescript
 export const appRouter = t.router({
@@ -102,9 +116,6 @@ Peer dependencies:
 
 For a procedure to support OpenAPI the following _must_ be true:
 
-- Both `input` and `output` parsers are present AND use `Zod` validation.
-- Query `input` parsers extend `Object<{ [string]: String | Number | BigInt | Date }>` or `Void`.
-- Mutation `input` parsers extend `Object<{ [string]: AnyType }>` or `Void`.
 - `meta.openapi.method` is `GET`, `POST`, `PATCH`, `PUT` or `DELETE`.
 - `meta.openapi.path` is a string starting with `/`.
 - `meta.openapi.path` parameters exist in `input` parser as `String | Number | BigInt | Date`
@@ -191,7 +202,7 @@ Explore a [complete example here](examples/with-nextjs/src/server/router.ts).
 
 ```typescript
 import { TRPCError, initTRPC } from '@trpc/server';
-import { OpenApiMeta } from 'trpc-openapi';
+import { OpenApiMeta } from '@dokploy/trpc-openapi';
 
 type User = { id: string; name: string };
 
@@ -333,6 +344,8 @@ Please see [full typings here](src/types.ts).
 | Property       | Type                | Description                                                                                          | Required | Default                |
 | -------------- | ------------------- | ---------------------------------------------------------------------------------------------------- | -------- | ---------------------- |
 | `enabled`      | `boolean`           | Exposes this procedure to `trpc-openapi` adapters and on the OpenAPI document.                       | `false`  | `true`                 |
+| `override`     | `boolean`           | Overrides the default value of the parameter.                                                        | `false`  | `false`                |
+| `additional`   | `boolean`           | Adds the parameter to the default value of the parameter.
 | `method`       | `HttpMethod`        | HTTP method this endpoint is exposed on. Value can be `GET`, `POST`, `PATCH`, `PUT` or `DELETE`.     | `true`   | `undefined`            |
 | `path`         | `string`            | Pathname this endpoint is exposed on. Value must start with `/`, specify path parameters using `{}`. | `true`   | `undefined`            |
 | `protect`      | `boolean`           | Requires this endpoint to use a security scheme.                                                     | `false`  | `false`                |
