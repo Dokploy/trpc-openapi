@@ -1,45 +1,69 @@
 // eslint-disable-next-line import/no-unresolved
-import { ProcedureType } from '@trpc/server';
-import { AnyZodObject, z } from 'zod';
+import { ProcedureType } from "@trpc/server";
+import { AnyZodObject, z } from "zod";
 
-import { OpenApiMeta, OpenApiProcedure, OpenApiProcedureRecord } from '../types';
+import {
+	OpenApiMeta,
+	OpenApiProcedure,
+	OpenApiProcedureRecord,
+} from "../types";
 
 const mergeInputs = (inputParsers: AnyZodObject[]): AnyZodObject => {
-  return inputParsers.reduce((acc, inputParser) => {
-    return acc.merge(inputParser);
-  }, z.object({}));
+	return inputParsers.reduce((acc, inputParser) => {
+		return acc.merge(inputParser);
+	}, z.object({}));
 };
 
 // `inputParser` & `outputParser` are private so this is a hack to access it
 export const getInputOutputParsers = (procedure: OpenApiProcedure) => {
-  const { inputs, output } = procedure._def;
-  return {
-    inputParser: inputs.length >= 2 ? mergeInputs(inputs as AnyZodObject[]) : inputs[0],
-    outputParser: output,
-  };
+	const { inputs, output } = procedure._def;
+	return {
+		inputParser:
+			inputs.length >= 2 ? mergeInputs(inputs as AnyZodObject[]) : inputs[0],
+		outputParser: output,
+	};
 };
 
 const getProcedureType = (procedure: OpenApiProcedure): ProcedureType => {
-  if (procedure._def.query) return 'query';
-  if (procedure._def.mutation) return 'mutation';
-  if (procedure._def.subscription) return 'subscription';
-  throw new Error('Unknown procedure type');
+	if (procedure._def.query) return "query";
+	if (procedure._def.mutation) return "mutation";
+	if (procedure._def.subscription) return "subscription";
+	throw new Error("Unknown procedure type");
 };
 
 export const forEachOpenApiProcedure = (
-  procedureRecord: OpenApiProcedureRecord,
-  callback: (values: {
-    path: string;
-    type: ProcedureType;
-    procedure: OpenApiProcedure;
-    openapi: NonNullable<OpenApiMeta['openapi']>;
-  }) => void,
+	procedureRecord: OpenApiProcedureRecord,
+	callback: (values: {
+		path: string;
+		type: ProcedureType;
+		procedure: OpenApiProcedure;
+		openapi: NonNullable<OpenApiMeta["openapi"]>;
+	}) => void,
 ) => {
-  for (const [path, procedure] of Object.entries(procedureRecord)) {
-    const { openapi } = procedure._def.meta ?? {};
-    if (openapi && openapi.enabled !== false) {
-      const type = getProcedureType(procedure);
-      callback({ path, type, procedure, openapi });
-    }
-  }
+	for (const [path, procedure] of Object.entries(procedureRecord)) {
+		console.log(procedure, path);
+		const { openapi } = procedure._def.meta ?? {
+			openapi: {
+				method: getProcedureType(procedure) === "query" ? "GET" : "POST",
+				path: path,
+				enabled: procedure?._def?.meta ?? true,
+				tags: [path.split(".")[0]],
+				contentTypes: ["application/json"],
+				summary: "",
+				description: "",
+				example: {
+					request: {},
+					response: {},
+				},
+				responseHeaders: [],
+				deprecated: false,
+				headers: [],
+				protect: false,
+			},
+		};
+		if (openapi && openapi.enabled !== false) {
+			const type = getProcedureType(procedure);
+			callback({ path, type, procedure, openapi });
+		}
+	}
 };

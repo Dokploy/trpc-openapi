@@ -204,15 +204,6 @@ export const getResponsesObject = (
 		| Record<string, OpenAPIV3.HeaderObject | OpenAPIV3.ReferenceObject>
 		| undefined,
 ): OpenAPIV3.ResponsesObject => {
-	// if (!instanceofZodType(schema)) {
-	//   throw new TRPCError({
-	//     message: 'Output parser expects a Zod validator',
-	//     code: 'INTERNAL_SERVER_ERROR',
-	//   });
-	// }
-
-	console.log(schema);
-
 	const successResponseObject: OpenAPIV3.ResponseObject = {
 		description: "Successful response",
 		headers: headers,
@@ -221,13 +212,10 @@ export const getResponsesObject = (
 				...(schema && {
 					schema: zodSchemaToOpenApiSchemaObject(schema),
 				}),
-				// schema: zodSchemaToOpenApiSchemaObject(schema),
 				example,
 			},
 		},
 	};
-
-	// console.log(zodSchemaToOpenApiSchemaObject(schema));
 
 	return {
 		200: successResponseObject,
