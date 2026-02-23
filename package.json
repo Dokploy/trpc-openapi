@@ -1,6 +1,6 @@
 {
   "name": "@dokploy/trpc-openapi",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "tRPC OpenAPI",
   "author": "Mauricio Siu <siumauricio@hotmail.com>",
   "private": false,
@@ -36,7 +36,7 @@
   },
   "peerDependencies": {
     "@trpc/server": "^10.0.0",
-    "zod": "^3.14.4"
+    "zod": "^3.14.4 || ^4"
   },
   "dependencies": {
     "co-body": "^6.1.0",

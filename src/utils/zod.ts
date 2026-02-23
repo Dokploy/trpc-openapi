@@ -31,12 +31,24 @@ export const instanceofZodTypeLikeVoid = (type: z.ZodTypeAny): type is ZodTypeLi
   );
 };
 
+/** Get inner type from ZodOptional (Zod 3: .unwrap(), Zod 4: _def.innerType) */
+const getOptionalInnerType = (type: z.ZodTypeAny): z.ZodTypeAny =>
+  (type as any)._def?.innerType ??
+  (typeof (type as any).unwrap === "function" ? (type as any).unwrap() : type);
+
+/** Get inner type from ZodDefault (Zod 3: .removeDefault(), Zod 4: _def.innerType) */
+const getDefaultInnerType = (type: z.ZodTypeAny): z.ZodTypeAny =>
+  (type as any)._def?.innerType ??
+  (typeof (type as any).removeDefault === "function"
+    ? (type as any).removeDefault()
+    : type);
+
 export const unwrapZodType = (type: z.ZodTypeAny, unwrapPreprocess: boolean): z.ZodTypeAny => {
   if (instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodOptional)) {
-    return unwrapZodType(type.unwrap(), unwrapPreprocess);
+    return unwrapZodType(getOptionalInnerType(type), unwrapPreprocess);
   }
   if (instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodDefault)) {
-    return unwrapZodType(type.removeDefault(), unwrapPreprocess);
+    return unwrapZodType(getDefaultInnerType(type), unwrapPreprocess);
   }
   if (instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodLazy)) {
     return unwrapZodType(type._def.getter(), unwrapPreprocess);

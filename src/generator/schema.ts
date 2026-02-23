@@ -100,7 +100,7 @@ export const getParameterObjects = (
 						code: "INTERNAL_SERVER_ERROR",
 					});
 				}
-				shapeSchema = shapeSchema.unwrap();
+				shapeSchema = unwrapZodType(shapeSchema, false);
 			}
 
 			const { description, ...openApiSchemaObject } =
