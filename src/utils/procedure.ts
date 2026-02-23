@@ -1,6 +1,6 @@
 // eslint-disable-next-line import/no-unresolved
 import { ProcedureType } from "@trpc/server";
-import { AnyZodObject, z } from "zod";
+import {  z } from "zod";
 
 import {
 	OpenApiMeta,
@@ -9,7 +9,7 @@ import {
 	OpenApiProcedureRecord,
 } from "../types";
 
-const mergeInputs = (inputParsers: AnyZodObject[]): AnyZodObject => {
+const mergeInputs = (inputParsers: z.ZodObject[]): z.ZodObject => {
 	return inputParsers.reduce((acc, inputParser) => {
 		return acc.merge(inputParser);
 	}, z.object({}));
@@ -20,7 +20,7 @@ export const getInputOutputParsers = (procedure: OpenApiProcedure) => {
 	const { inputs, output } = procedure._def;
 	return {
 		inputParser:
-			inputs.length >= 2 ? mergeInputs(inputs as AnyZodObject[]) : inputs[0],
+			inputs.length >= 2 ? mergeInputs(inputs as z.ZodObject[]) : inputs[0],
 		outputParser: output,
 	};
 };

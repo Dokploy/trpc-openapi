@@ -1,71 +1,96 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-export const instanceofZodType = (type: any): type is z.ZodTypeAny => {
-  return !!type?._def?.typeName;
+/* ============================================================
+   Base helpers
+============================================================ */
+
+export const instanceofZodType = (
+  type: unknown
+): type is z.ZodTypeAny => {
+  return !!(type as any)?._zod?.def?.type;
 };
 
-export const instanceofZodTypeKind = <Z extends z.ZodFirstPartyTypeKind>(
+export const instanceofZodTypeKind = <
+  T extends z.ZodTypeAny,
+  K extends string
+>(
   type: z.ZodTypeAny,
-  zodTypeKind: Z,
-): type is InstanceType<typeof z[Z]> => {
-  return type?._def?.typeName === zodTypeKind;
+  kind: K
+): type is T => {
+  return (type as any)?._zod?.def?.type === kind;
 };
+
+/* ============================================================
+   Optional / Object
+============================================================ */
 
 export const instanceofZodTypeOptional = (
-  type: z.ZodTypeAny,
+  type: z.ZodTypeAny
 ): type is z.ZodOptional<z.ZodTypeAny> => {
-  return instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodOptional);
+  return type instanceof z.ZodOptional;
 };
 
-export const instanceofZodTypeObject = (type: z.ZodTypeAny): type is z.ZodObject<z.ZodRawShape> => {
-  return instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodObject);
+export const instanceofZodTypeObject = (
+  type: z.ZodTypeAny
+): type is z.ZodObject<any> => {
+  return type instanceof z.ZodObject;
 };
 
-export type ZodTypeLikeVoid = z.ZodVoid | z.ZodUndefined | z.ZodNever;
+/* ============================================================
+   Void-like
+============================================================ */
 
-export const instanceofZodTypeLikeVoid = (type: z.ZodTypeAny): type is ZodTypeLikeVoid => {
-  return (
-    instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodVoid) ||
-    instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodUndefined) ||
-    instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodNever)
-  );
+export type ZodTypeLikeVoid =
+  | z.ZodVoid
+  | z.ZodUndefined
+  | z.ZodNever;
+
+export const instanceofZodTypeLikeVoid = (
+  type: z.ZodTypeAny
+): type is ZodTypeLikeVoid => {
+  const t = (type as any)?._zod?.def?.type;
+  return t === "void" || t === "undefined" || t === "never";
 };
 
-/** Get inner type from ZodOptional (Zod 3: .unwrap(), Zod 4: _def.innerType) */
-const getOptionalInnerType = (type: z.ZodTypeAny): z.ZodTypeAny =>
-  (type as any)._def?.innerType ??
-  (typeof (type as any).unwrap === "function" ? (type as any).unwrap() : type);
+/* ============================================================
+   unwrapZodType
+============================================================ */
 
-/** Get inner type from ZodDefault (Zod 3: .removeDefault(), Zod 4: _def.innerType) */
-const getDefaultInnerType = (type: z.ZodTypeAny): z.ZodTypeAny =>
-  (type as any)._def?.innerType ??
-  (typeof (type as any).removeDefault === "function"
-    ? (type as any).removeDefault()
-    : type);
+export const unwrapZodType = (
+  type: z.ZodTypeAny,
+  unwrapPreprocess: boolean
+): z.ZodTypeAny => {
+  const def = (type as any)?._zod?.def;
+  if (!def) return type;
 
-export const unwrapZodType = (type: z.ZodTypeAny, unwrapPreprocess: boolean): z.ZodTypeAny => {
-  if (instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodOptional)) {
-    return unwrapZodType(getOptionalInnerType(type), unwrapPreprocess);
+  switch (def.type) {
+    case "optional":
+      return unwrapZodType(def.innerType, unwrapPreprocess);
+
+    case "default":
+      return unwrapZodType(def.innerType, unwrapPreprocess);
+
+    case "lazy":
+      return unwrapZodType(def.getter(), unwrapPreprocess);
+
+    case "transform":
+    case "pipe":
+      return unwrapZodType(def.schema, unwrapPreprocess);
+
+    case "preprocess":
+      if (unwrapPreprocess) {
+        return unwrapZodType(def.schema, unwrapPreprocess);
+      }
+      return type;
+
+    default:
+      return type;
   }
-  if (instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodDefault)) {
-    return unwrapZodType(getDefaultInnerType(type), unwrapPreprocess);
-  }
-  if (instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodLazy)) {
-    return unwrapZodType(type._def.getter(), unwrapPreprocess);
-  }
-  if (instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodEffects)) {
-    if (type._def.effect.type === 'refinement') {
-      return unwrapZodType(type._def.schema, unwrapPreprocess);
-    }
-    if (type._def.effect.type === 'transform') {
-      return unwrapZodType(type._def.schema, unwrapPreprocess);
-    }
-    if (unwrapPreprocess && type._def.effect.type === 'preprocess') {
-      return unwrapZodType(type._def.schema, unwrapPreprocess);
-    }
-  }
-  return type;
 };
+
+/* ============================================================
+   ZodTypeLikeString
+============================================================ */
 
 type NativeEnumType = {
   [k: string]: string | number;
@@ -74,54 +99,78 @@ type NativeEnumType = {
 
 export type ZodTypeLikeString =
   | z.ZodString
-  | z.ZodOptional<ZodTypeLikeString>
-  | z.ZodDefault<ZodTypeLikeString>
-  | z.ZodEffects<ZodTypeLikeString, unknown, unknown>
-  | z.ZodUnion<[ZodTypeLikeString, ...ZodTypeLikeString[]]>
-  | z.ZodIntersection<ZodTypeLikeString, ZodTypeLikeString>
-  | z.ZodLazy<ZodTypeLikeString>
+  | z.ZodOptional<any>
+  | z.ZodDefault<any>
+  | z.ZodUnion<any>
+  | z.ZodIntersection<any, any>
+  | z.ZodLazy<any>
   | z.ZodLiteral<string>
-  | z.ZodEnum<[string, ...string[]]>
-  | z.ZodNativeEnum<NativeEnumType>;
+  | z.ZodEnum<any>
+  | z.ZodEnum<NativeEnumType>;
 
-export const instanceofZodTypeLikeString = (_type: z.ZodTypeAny): _type is ZodTypeLikeString => {
+export const instanceofZodTypeLikeString = (
+  _type: z.ZodTypeAny
+): _type is ZodTypeLikeString => {
   const type = unwrapZodType(_type, false);
+  const def = (type as any)?._zod?.def;
+  if (!def) return false;
 
-  if (instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodEffects)) {
-    if (type._def.effect.type === 'preprocess') {
+  switch (def.type) {
+    case "string":
       return true;
-    }
+
+    case "literal":
+      return typeof def.value === "string";
+
+    case "enum":
+      return true;
+
+    case "nativeEnum":
+      return !Object.values(def.values).some(
+        (value) => typeof value === "number"
+      );
+
+    case "union":
+      return def.options.every((option: any) =>
+        instanceofZodTypeLikeString(option)
+      );
+
+    case "intersection":
+      return (
+        instanceofZodTypeLikeString(def.left) &&
+        instanceofZodTypeLikeString(def.right)
+      );
+
+    case "preprocess":
+      return true;
+
+    default:
+      return false;
   }
-  if (instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodUnion)) {
-    return !type._def.options.some((option) => !instanceofZodTypeLikeString(option));
-  }
-  if (instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodIntersection)) {
-    return (
-      instanceofZodTypeLikeString(type._def.left) && instanceofZodTypeLikeString(type._def.right)
-    );
-  }
-  if (instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodLiteral)) {
-    return typeof type._def.value === 'string';
-  }
-  if (instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodEnum)) {
-    return true;
-  }
-  if (instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodNativeEnum)) {
-    return !Object.values(type._def.values).some((value) => typeof value === 'number');
-  }
-  return instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodString);
 };
 
-export const zodSupportsCoerce = 'coerce' in z;
+/* ============================================================
+   Coercible
+============================================================ */
 
-export type ZodTypeCoercible = z.ZodNumber | z.ZodBoolean | z.ZodBigInt | z.ZodDate;
+export const zodSupportsCoerce = "coerce" in z;
 
-export const instanceofZodTypeCoercible = (_type: z.ZodTypeAny): _type is ZodTypeCoercible => {
+export type ZodTypeCoercible =
+  | z.ZodNumber
+  | z.ZodBoolean
+  | z.ZodBigInt
+  | z.ZodDate;
+
+export const instanceofZodTypeCoercible = (
+  _type: z.ZodTypeAny
+): _type is ZodTypeCoercible => {
   const type = unwrapZodType(_type, false);
+  const def = (type as any)?._zod?.def?.type;
+
   return (
-    instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodNumber) ||
-    instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodBoolean) ||
-    instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodBigInt) ||
-    instanceofZodTypeKind(type, z.ZodFirstPartyTypeKind.ZodDate)
+    def === "number" ||
+    def === "boolean" ||
+    def === "bigint" ||
+    def === "date"
   );
 };
