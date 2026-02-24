@@ -113,9 +113,10 @@ describe('generator', () => {
           .query(({ input }) => ({ name: input.name })),
       });
 
-      expect(() => {
-        generateOpenApiDocument(appRouter, defaultDocOpts);
-      }).toThrowError('[query.noOutput] - Output parser expects a Zod validator');
+      const document = generateOpenApiDocument(appRouter, defaultDocOpts);
+      expect(document.paths).toBeDefined();
+      expect(document.paths!['/no-output']?.get).toBeDefined();
+      expect(document.paths!['/no-output']?.get?.responses?.[200]).toBeDefined();
     }
     {
       const appRouter = t.router({
@@ -125,9 +126,10 @@ describe('generator', () => {
           .mutation(({ input }) => ({ name: input.name })),
       });
 
-      expect(() => {
-        generateOpenApiDocument(appRouter, defaultDocOpts);
-      }).toThrowError('[mutation.noOutput] - Output parser expects a Zod validator');
+      const document = generateOpenApiDocument(appRouter, defaultDocOpts);
+      expect(document.paths).toBeDefined();
+      expect(document.paths!['/no-output']?.post).toBeDefined();
+      expect(document.paths!['/no-output']?.post?.responses?.[200]).toBeDefined();
     }
   });
 
@@ -154,9 +156,10 @@ describe('generator', () => {
           .query(({ input }) => ({ payload: input.payload })),
       });
 
-      expect(() => {
-        generateOpenApiDocument(appRouter, defaultDocOpts);
-      }).toThrowError('[query.badInput] - Output parser expects a Zod validator');
+      const document = generateOpenApiDocument(appRouter, defaultDocOpts);
+      expect(document.paths).toBeDefined();
+      expect(document.paths!['/bad-input']?.get).toBeDefined();
+      expect(document.paths!['/bad-input']?.get?.responses?.[200]).toBeDefined();
     }
   });
 

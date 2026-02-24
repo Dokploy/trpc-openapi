@@ -29,6 +29,7 @@ const createFetchHandlerCaller = <TRouter extends OpenApiRouter>(
 ) => {
   const openApiHttpHandler = createOpenApiFetchHandler<TRouter>({
     router: handlerOpts.router,
+    endpoint: handlerOpts.endpoint,
     createContext: handlerOpts.createContext ?? createContextMock,
     responseMeta: handlerOpts.responseMeta ?? responseMetaMock,
     onError: handlerOpts.onError ?? onErrorMock,

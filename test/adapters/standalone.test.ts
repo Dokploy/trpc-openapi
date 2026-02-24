@@ -75,7 +75,7 @@ describe('standalone adapter', () => {
     server?.close();
   });
 
-  // Please note: validating router does not happen in `production`.
+  // Procedures without output parser use empty object schema and are included in OpenAPI.
   test('with invalid router', () => {
     const appRouter = t.router({
       invalidRoute: t.procedure
@@ -88,7 +88,7 @@ describe('standalone adapter', () => {
       createOpenApiHttpHandler({
         router: appRouter,
       });
-    }).toThrowError('[query.invalidRoute] - Output parser expects a Zod validator');
+    }).not.toThrow();
   });
 
   test('with not found path', async () => {

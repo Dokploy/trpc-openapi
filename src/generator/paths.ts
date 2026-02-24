@@ -1,4 +1,5 @@
 import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
 import {
   ZodOpenApiParameters,
   ZodOpenApiPathsObject,
@@ -102,12 +103,8 @@ export const getOpenApiPathsObject = <TMeta = Record<string, unknown>>(
           code: 'INTERNAL_SERVER_ERROR',
         });
       }
-      if (!instanceofZodType(outputParser)) {
-        throw new TRPCError({
-          message: 'Output parser expects a Zod validator',
-          code: 'INTERNAL_SERVER_ERROR',
-        });
-      }
+      // When no output parser is defined, use empty object schema (procedure still included in OpenAPI doc)
+      const responseSchema = instanceofZodType(outputParser) ? outputParser : z.object({});
 
       // Optional input/output parameters are treated as required by default in the OpenAPI document
       const isInputRequired = true;
@@ -159,7 +156,7 @@ export const getOpenApiPathsObject = <TMeta = Record<string, unknown>>(
       }
 
       const responses = getResponsesObject(
-        outputParser,
+        responseSchema,
         httpMethod,
         responseHeaders,
         protect,
