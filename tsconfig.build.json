@@ -1,12 +1,4 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["src"],
-  "exclude": [
-    "examples/with-nextjs",
-    "examples/with-express",
-    "examples/with-interop",
-    "examples/with-serverless",
-    "examples/with-fastify",
-    "examples/with-nuxtjs"
-  ]
+  "include": ["src"]
 }

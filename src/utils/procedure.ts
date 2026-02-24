@@ -1,74 +1,103 @@
-// eslint-disable-next-line import/no-unresolved
-import { ProcedureType } from "@trpc/server";
-import {  z } from "zod";
+import { TRPCProcedureType } from '@trpc/server';
+import { ZodObject, z } from 'zod';
 
-import {
-	OpenApiMeta,
-	OpenApiMethod,
-	OpenApiProcedure,
-	OpenApiProcedureRecord,
-} from "../types";
+import { OpenApiMeta, OpenApiMethod, OpenApiProcedure, OpenApiProcedureRecord } from '../types';
 
-const mergeInputs = (inputParsers: z.ZodObject[]): z.ZodObject => {
-	return inputParsers.reduce((acc, inputParser) => {
-		return acc.merge(inputParser);
-	}, z.object({}));
-};
-
-// `inputParser` & `outputParser` are private so this is a hack to access it
-export const getInputOutputParsers = (procedure: OpenApiProcedure) => {
-	const { inputs, output } = procedure._def;
-	return {
-		inputParser:
-			inputs.length >= 2 ? mergeInputs(inputs as z.ZodObject[]) : inputs[0],
-		outputParser: output,
-	};
-};
-
-const getProcedureType = (procedure: OpenApiProcedure): ProcedureType => {
-	if (procedure._def.query) return "query";
-	if (procedure._def.mutation) return "mutation";
-	if (procedure._def.subscription) return "subscription";
-	throw new Error("Unknown procedure type");
+const mergeInputs = (inputParsers: ZodObject[]): ZodObject => {
+  return inputParsers.reduce((acc, inputParser) => {
+    return acc.merge(inputParser);
+  }, z.object({}));
 };
 
 export const getMethod = (procedure: OpenApiProcedure): OpenApiMethod => {
-	return getProcedureType(procedure) === "query" ? "GET" : "POST";
+  return getProcedureType(procedure) === 'query' ? 'GET' : 'POST';
 };
 
-export const forEachOpenApiProcedure = (
-	procedureRecord: OpenApiProcedureRecord,
-	callback: (values: {
-		path: string;
-		type: ProcedureType;
-		procedure: OpenApiProcedure;
-		openapi: NonNullable<OpenApiMeta["openapi"]>;
-	}) => void,
+// `inputParser` & `outputParser` are private so this is a hack to access it
+export const getInputOutputParsers = (
+  procedure: OpenApiProcedure,
+): {
+  inputParser: ZodObject;
+  outputParser: ZodObject | undefined;
+  hasInputsDefined: boolean;
+} => {
+  const inputs = procedure._def.inputs as ZodObject[];
+  // @ts-expect-error The types seems to be incorrect
+  const output = procedure._def.output as ZodObject | undefined;
+
+  let inputParser: ZodObject;
+  if (inputs.length >= 2) {
+    inputParser = mergeInputs(inputs);
+  } else if (inputs.length === 1) {
+    inputParser = inputs[0]!;
+  } else {
+    inputParser = z.object({});
+  }
+
+  return {
+    inputParser,
+    outputParser: output,
+    hasInputsDefined: inputs.length > 0,
+  };
+};
+
+const getProcedureType = (procedure: OpenApiProcedure): TRPCProcedureType => {
+  if (!procedure._def.type) {
+    throw new Error('Unknown procedure type');
+  }
+  return procedure._def.type;
+};
+
+export const forEachOpenApiProcedure = <TMeta = Record<string, unknown>>(
+  procedureRecord: OpenApiProcedureRecord,
+  callback: (values: {
+    path: string;
+    type: TRPCProcedureType;
+    procedure: OpenApiProcedure;
+    meta: {
+      openapi: NonNullable<OpenApiMeta['openapi']>;
+    } & TMeta;
+  }) => void,
 ) => {
-	for (const [path, procedure] of Object.entries(procedureRecord)) {
-		const additional = procedure._def.meta?.openapi?.additional ?? false;
-		const override = procedure._def.meta?.openapi?.override ?? false;
-		const defaultOpenApiMeta = {
-			method: getMethod(procedure),
-			path: path,
-			enabled: true,
-			tags: [path.split(".")[0]],
-			protect: true,
-		};
-		let openapi: OpenApiMeta;
+  for (const [path, procedure] of Object.entries(procedureRecord)) {
+    const type = getProcedureType(procedure as OpenApiProcedure);
+    const meta = procedure._def.meta as unknown as OpenApiMeta | undefined;
+    if (meta?.openapi?.enabled === false) {
+      continue;
+    }
+    const additional = meta?.openapi?.additional ?? false;
+    const override = meta?.openapi?.override ?? false;
 
-		if (override) {
-			openapi = { ...procedure._def.meta?.openapi };
-		} else if (additional) {
-			openapi = { ...defaultOpenApiMeta, ...procedure._def.meta?.openapi };
-		} else {
-			openapi = { ...procedure._def.meta?.openapi, ...defaultOpenApiMeta };
-		}
+    const defaultOpenApiMeta: NonNullable<OpenApiMeta['openapi']> = {
+      method: getMethod(procedure as OpenApiProcedure),
+      path: `/${path.replace(/\./g, '/')}`,
+      enabled: true,
+      tags: [path.split('.')[0] ?? 'default'],
+      protect: true,
+    };
 
-		if (openapi && openapi.enabled !== false) {
-			const type = getProcedureType(procedure);
-			// @ts-ignore
-			callback({ path, type, procedure, openapi });
-		}
-	}
+    let openapi: NonNullable<OpenApiMeta['openapi']>;
+
+    if (override && meta?.openapi) {
+      openapi = { ...meta.openapi };
+    } else if (additional && meta?.openapi) {
+      openapi = { ...defaultOpenApiMeta, ...meta.openapi };
+    } else if (meta?.openapi) {
+      openapi = { ...meta.openapi, ...defaultOpenApiMeta };
+    } else {
+      openapi = defaultOpenApiMeta;
+    }
+
+    if (openapi.enabled !== false) {
+      callback({
+        path,
+        type,
+        procedure: procedure as OpenApiProcedure,
+        meta: {
+          openapi,
+          ...(meta as TMeta),
+        },
+      });
+    }
+  }
 };

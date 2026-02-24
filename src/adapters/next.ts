@@ -1,64 +1,59 @@
-import { TRPCError } from "@trpc/server";
-import type { NextApiRequest, NextApiResponse } from "next";
+import { TRPCError } from '@trpc/server';
+import { NextApiRequest, NextApiResponse } from 'next';
 
-import type { OpenApiErrorResponse, OpenApiRouter } from "../types";
-import { normalizePath } from "../utils/path";
-import {
-	type CreateOpenApiNodeHttpHandlerOptions,
-	createOpenApiNodeHttpHandler,
-} from "./node-http/core";
+import { OpenApiErrorResponse, OpenApiRouter } from '../types';
+import { normalizePath } from '../utils';
+import { CreateOpenApiNodeHttpHandlerOptions, createOpenApiNodeHttpHandler } from './node-http';
 
 export type CreateOpenApiNextHandlerOptions<TRouter extends OpenApiRouter> =
-	Omit<
-		CreateOpenApiNodeHttpHandlerOptions<
-			TRouter,
-			NextApiRequest,
-			NextApiResponse
-		>,
-		"maxBodySize"
-	>;
+  CreateOpenApiNodeHttpHandlerOptions<TRouter, NextApiRequest, NextApiResponse>;
 
 export const createOpenApiNextHandler = <TRouter extends OpenApiRouter>(
-	opts: CreateOpenApiNextHandlerOptions<TRouter>,
+  opts: CreateOpenApiNextHandlerOptions<TRouter>,
 ) => {
-	const openApiHttpHandler = createOpenApiNodeHttpHandler(opts);
+  const openApiHttpHandler = createOpenApiNodeHttpHandler(opts);
 
-	return async (req: NextApiRequest, res: NextApiResponse) => {
-		let pathname: string | null = null;
-		if (typeof req.query.trpc === "string") {
-			pathname = req.query.trpc;
-		} else if (Array.isArray(req.query.trpc)) {
-			pathname = req.query.trpc.join("/");
-		}
+  return async (req: NextApiRequest, res: NextApiResponse) => {
+    let pathname: string | null = null;
+    if (typeof req.query.trpc === 'string') {
+      pathname = req.query.trpc;
+    } else if (Array.isArray(req.query.trpc)) {
+      pathname = req.query.trpc.join('/');
+    }
 
-		if (pathname === null) {
-			const error = new TRPCError({
-				message:
-					'Query "trpc" not found - is the `trpc-openapi` file named `[...trpc].ts`?',
-				code: "INTERNAL_SERVER_ERROR",
-			});
+    if (pathname === null) {
+      const error = new TRPCError({
+        message: 'Query "trpc" not found - is the `trpc-to-openapi` file named `[...trpc].ts`?',
+        code: 'INTERNAL_SERVER_ERROR',
+      });
 
-			opts.onError?.({
-				error,
-				type: "unknown",
-				path: undefined,
-				input: undefined,
-				ctx: undefined,
-				req,
-			});
+      opts.onError?.({
+        error,
+        type: 'unknown',
+        path: undefined,
+        input: undefined,
+        ctx: undefined,
+        req,
+      });
 
-			res.statusCode = 500;
-			res.setHeader("Content-Type", "application/json");
-			const body: OpenApiErrorResponse = {
-				message: error.message,
-				code: error.code,
-			};
-			res.end(JSON.stringify(body));
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      const body: OpenApiErrorResponse = {
+        message: error.message,
+        code: error.code,
+      };
+      res.end(JSON.stringify(body));
 
-			return;
-		}
+      return;
+    }
 
-		req.url = normalizePath(pathname);
-		await openApiHttpHandler(req, res);
-	};
+    if (!('once' in res)) {
+      Object.assign(res, {
+        once: () => undefined,
+      });
+    }
+
+    req.url = normalizePath(pathname);
+    await openApiHttpHandler(req, res);
+  };
 };

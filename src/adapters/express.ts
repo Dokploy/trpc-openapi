@@ -1,15 +1,10 @@
-import type { Request, Response } from 'express';
-import type { NodeHTTPRequest } from '@trpc/server/dist/adapters/node-http';
+import { Request, Response } from 'express';
 
-import type { OpenApiRouter } from '../types';
-import {
-  type CreateOpenApiNodeHttpHandlerOptions,
-  createOpenApiNodeHttpHandler,
-} from './node-http/core';
+import { OpenApiRouter } from '../types';
+import { CreateOpenApiNodeHttpHandlerOptions, createOpenApiNodeHttpHandler } from './node-http';
 
-/** Express Request is compatible with NodeHTTPRequest at runtime (query + body). */
 export type CreateOpenApiExpressMiddlewareOptions<TRouter extends OpenApiRouter> =
-  CreateOpenApiNodeHttpHandlerOptions<TRouter, NodeHTTPRequest, Response>;
+  CreateOpenApiNodeHttpHandlerOptions<TRouter, Request, Response>;
 
 export const createOpenApiExpressMiddleware = <TRouter extends OpenApiRouter>(
   opts: CreateOpenApiExpressMiddlewareOptions<TRouter>,
@@ -17,6 +12,6 @@ export const createOpenApiExpressMiddleware = <TRouter extends OpenApiRouter>(
   const openApiHttpHandler = createOpenApiNodeHttpHandler(opts);
 
   return async (req: Request, res: Response) => {
-    await openApiHttpHandler(req as NodeHTTPRequest, res);
+    await openApiHttpHandler(req, res);
   };
 };
