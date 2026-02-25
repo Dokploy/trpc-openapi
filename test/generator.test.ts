@@ -1695,7 +1695,6 @@ describe('generator', () => {
         Object {
           "in": "query",
           "name": "one",
-          "required": true,
           "schema": Object {
             "type": "string",
           },
@@ -1797,7 +1796,7 @@ describe('generator', () => {
             },
           },
         },
-        "required": true,
+        "required": false,
       }
     `);
     expect(openApiDocument.paths!['/optional-object']!.post!.responses?.[200])
