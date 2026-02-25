@@ -1663,7 +1663,6 @@ describe('generator', () => {
         Object {
           "in": "query",
           "name": "one",
-          "required": true,
           "schema": Object {
             "type": "string",
           },
@@ -1812,6 +1811,37 @@ describe('generator', () => {
         "description": "Successful response",
       }
     `);
+  });
+
+  test('with mixed required and optional query params', () => {
+    const containerIdRegex = /^[a-zA-Z0-9.\-_]+$/;
+    const appRouter = t.router({
+      getConfig: t.procedure
+        .meta({ openapi: { method: 'GET', path: '/docker/getConfig' } })
+        .input(
+          z.object({
+            containerId: z.string().min(1).regex(containerIdRegex, 'Invalid container id.'),
+            serverId: z.string().optional(),
+          }),
+        )
+        .output(z.object({}))
+        .query(() => ({})),
+    });
+
+    const openApiDocument = generateOpenApiDocument(appRouter, defaultDocOpts);
+    const params = openApiDocument.paths!['/docker/getConfig']!.get!.parameters as Array<{
+      name: string;
+      required?: boolean;
+      schema: unknown;
+    }>;
+    expect(params).toBeDefined();
+    const containerIdParam = params.find((p) => p.name === 'containerId');
+    const serverIdParam = params.find((p) => p.name === 'serverId');
+    expect(containerIdParam).toBeDefined();
+    expect(containerIdParam!.required).toBe(true);
+    expect(containerIdParam!.schema).toMatchObject({ type: 'string', minLength: 1, pattern: containerIdRegex.source });
+    expect(serverIdParam).toBeDefined();
+    expect(serverIdParam!.required).not.toBe(true);
   });
 
   test('with default', () => {

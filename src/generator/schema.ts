@@ -90,7 +90,7 @@ export const getParameterObjects = (
       return {
         name: shapeKey,
         paramType: isPathParameter ? 'path' : 'query',
-        required: isPathParameter || required || isShapeRequired,
+        required: isPathParameter || isShapeRequired,
         schema: shapeSchema,
       };
     })
