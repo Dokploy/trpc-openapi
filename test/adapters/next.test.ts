@@ -1,6 +1,8 @@
-/* eslint-disable @typescript-eslint/ban-types */
 import { initTRPC } from '@trpc/server';
 import { NextApiRequest, NextApiResponse } from 'next';
+import { IncomingHttpHeaders, IncomingMessage } from 'http';
+import { NextApiRequestCookies, NextApiRequestQuery } from 'next/dist/server/api-utils';
+import { Socket } from 'net';
 import { z } from 'zod';
 
 import {
@@ -10,6 +12,25 @@ import {
   OpenApiRouter,
   createOpenApiNextHandler,
 } from '../../src';
+
+type NextApiRequestOptions = Partial<NextApiRequestMock>;
+class NextApiRequestMock extends IncomingMessage implements NextApiRequest {
+  public query: NextApiRequestQuery = {};
+  public cookies: NextApiRequestCookies = {};
+  public headers: IncomingHttpHeaders = {};
+  public env = {};
+  public body: unknown;
+
+  constructor(options: NextApiRequestOptions) {
+    super(new Socket());
+
+    this.method = options.method;
+    this.body = options.body;
+    this.query = options.query ?? {};
+    this.headers = options.headers ?? {};
+    this.env = options.env ?? {};
+  }
+}
 
 const createContextMock = jest.fn();
 const responseMetaMock = jest.fn();
@@ -31,31 +52,40 @@ const createOpenApiNextHandlerCaller = <TRouter extends OpenApiRouter>(
     onError: handlerOpts.onError ?? onErrorMock,
   } as any);
 
-  return (req: { method: string; query: Record<string, any>; body?: any }) => {
+  return (req: {
+    method: string;
+    query: Record<string, any>;
+    body?: any;
+    headers?: Record<string, any>;
+  }) => {
     return new Promise<{
       statusCode: number;
       headers: Record<string, any>;
-      body: OpenApiResponse | undefined;
-      /* eslint-disable-next-line @typescript-eslint/no-misused-promises, no-async-promise-executor */
+      body: OpenApiResponse;
     }>(async (resolve, reject) => {
-      const headers = new Map();
+      const headers = new Headers();
       let body: any;
-      const res: any = {
+      const nextResponse = {
         statusCode: undefined,
         setHeader: (key: string, value: any) => headers.set(key, value),
+        getHeaders: () => Object.fromEntries(headers.entries()),
         end: (data: string) => {
           body = JSON.parse(data);
         },
-      };
+      } as unknown as NextApiResponse;
+
+      const nextRequest = new NextApiRequestMock({
+        method: req.method,
+        query: req.query,
+        body: req.body,
+        headers: req.headers,
+      });
 
       try {
-        await openApiNextHandler(
-          req as unknown as NextApiRequest,
-          res as unknown as NextApiResponse,
-        );
+        await openApiNextHandler(nextRequest, nextResponse);
         resolve({
-          statusCode: res.statusCode,
-          headers: Object.fromEntries(headers.entries()),
+          statusCode: nextResponse.statusCode,
+          headers: nextResponse.getHeaders(),
           body,
         });
       } catch (error) {
@@ -65,7 +95,7 @@ const createOpenApiNextHandlerCaller = <TRouter extends OpenApiRouter>(
   };
 };
 
-const t = initTRPC.meta<OpenApiMeta>().context<any>().create();
+const t = initTRPC.meta<OpenApiMeta>().context().create();
 
 describe('next adapter', () => {
   afterEach(() => {
@@ -98,11 +128,11 @@ describe('next adapter', () => {
     {
       const res = await openApiNextHandlerCaller({
         method: 'GET',
-        query: { trpc: 'say-hello', name: 'James' },
+        query: { trpc: 'say-hello', name: 'Lily' },
       });
 
       expect(res.statusCode).toBe(200);
-      expect(res.body).toEqual({ greeting: 'Hello James!' });
+      expect(res.body).toEqual({ greeting: 'Hello Lily!' });
       expect(createContextMock).toHaveBeenCalledTimes(1);
       expect(responseMetaMock).toHaveBeenCalledTimes(1);
       expect(onErrorMock).toHaveBeenCalledTimes(0);
@@ -113,11 +143,12 @@ describe('next adapter', () => {
       const res = await openApiNextHandlerCaller({
         method: 'POST',
         query: { trpc: 'say-hello' },
-        body: { name: 'James' },
+        body: { name: 'Lily' },
+        headers: { 'content-type': 'application/json' },
       });
 
       expect(res.statusCode).toBe(200);
-      expect(res.body).toEqual({ greeting: 'Hello James!' });
+      expect(res.body).toEqual({ greeting: 'Hello Lily!' });
       expect(createContextMock).toHaveBeenCalledTimes(1);
       expect(responseMetaMock).toHaveBeenCalledTimes(1);
       expect(onErrorMock).toHaveBeenCalledTimes(0);
@@ -127,11 +158,11 @@ describe('next adapter', () => {
     {
       const res = await openApiNextHandlerCaller({
         method: 'GET',
-        query: { trpc: ['say', 'hello'], name: 'James' },
+        query: { trpc: ['say', 'hello'], name: 'Lily' },
       });
 
       expect(res.statusCode).toBe(200);
-      expect(res.body).toEqual({ greeting: 'Hello James!' });
+      expect(res.body).toEqual({ greeting: 'Hello Lily!' });
       expect(createContextMock).toHaveBeenCalledTimes(1);
       expect(responseMetaMock).toHaveBeenCalledTimes(1);
       expect(onErrorMock).toHaveBeenCalledTimes(0);
@@ -152,7 +183,7 @@ describe('next adapter', () => {
 
     expect(res.statusCode).toBe(500);
     expect(res.body).toEqual({
-      message: 'Query "trpc" not found - is the `trpc-openapi` file named `[...trpc].ts`?',
+      message: 'Query "trpc" not found - is the `trpc-to-openapi` file named `[...trpc].ts`?',
       code: 'INTERNAL_SERVER_ERROR',
     });
     expect(createContextMock).toHaveBeenCalledTimes(0);

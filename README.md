@@ -1,59 +1,56 @@
-![trpc-openapi](assets/trpc-openapi-readme.png)
-
+<p align="center">
+  <img src="assets/trpc-openapi.svg">
+</p>
 <div align="center">
-  <h1>trpc-openapi</h1>
-  <a href="https://www.npmjs.com/package/trpc-openapi"><img src="https://img.shields.io/npm/v/trpc-openapi.svg?style=flat&color=brightgreen" target="_blank" /></a>
+  <h1>trpc-to-openapi</h1>
+  <a href="https://www.npmjs.com/package/trpc-to-openapi"><img src="https://img.shields.io/npm/v/trpc-to-openapi.svg?style=flat&color=brightgreen" target="_blank" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-black" /></a>
-  <a href="https://trpc.io/discord" target="_blank"><img src="https://img.shields.io/badge/chat-discord-blue.svg" /></a>
   <br />
   <hr />
 </div>
 
-
-
 ## **[OpenAPI](https://swagger.io/specification/) support for [tRPC](https://trpc.io/)** 🧩
 
+- Support for tRPC ^11.1.0
+- Easy REST endpoints for your tRPC procedures.
+- Perfect for incremental adoption.
+- Supports all OpenAPI versions.
 
-# Note
+Note: This project is a fork of a fork, with full credit to the original authors. It appears that the original author has abandoned the project, so I plan to add new features in the near future.
 
-We use this package to generate OpenAPI documents for our tRPC endpoints in https://github.com/Dokploy/dokploy
+### Customizations (Dokploy-style)
 
-We make some changes to make input, output and meta parameters be optional by default.
+This fork adds the following behaviour (inspired by [Dokploy](https://github.com/Dokploy/dokploy)):
 
-1. We make optional input and output parameters required by default.
-2. We make .meta optional for all procedures.
-3. Introduce 2 flags to .meta() to override and additional parameters.
-4. `override` parameter overrides the default value and will take the whole object of openapi.
-5. `additional` parameters will be default values + the values provided in the openapi object.
-
+1. **Optional input and output parameters are required by default** – In the generated OpenAPI document, optional input/output parameters are treated as required.
+2. **`.meta` is optional for all procedures** – Procedures without `.meta({ openapi: ... })` are still exposed with default OpenAPI metadata (method from procedure type, path from procedure path, `enabled: true`, `protect: true`).
+3. **Two flags on `meta.openapi`**:
+   - **`override`** – When `true`, only the provided `openapi` object is used (no defaults merged).
+   - **`additional`** – When `true`, defaults are applied first, then your `openapi` values are merged on top.
 
 ## Usage
 
-- Easy REST endpoints for your tRPC procedures.
-- Perfect for incremental adoption.
-- OpenAPI version 3.0.3.
-
-**1. Install `@dokploy/trpc-openapi`.**
+**1. Install `trpc-to-openapi`.**
 
 ```bash
+# pnpm
+pnpm add trpc-to-openapi
 # npm
-npm install @dokploy/trpc-openapi
+npm install trpc-to-openapi
 # yarn
-yarn add @dokploy/trpc-openapi
+yarn add trpc-to-openapi
 ```
 
 **2. Add `OpenApiMeta` to your tRPC instance.**
 
 ```typescript
 import { initTRPC } from '@trpc/server';
-import { OpenApiMeta } from '@dokploy/trpc-openapi';
+import { OpenApiMeta } from 'trpc-to-openapi';
 
 const t = initTRPC.meta<OpenApiMeta>().create(); /* 👈 */
 ```
 
 **3. Enable `openapi` support for a procedure.**
-
-
 
 ```typescript
 export const appRouter = t.router({
@@ -63,6 +60,13 @@ export const appRouter = t.router({
     .output(z.object({ greeting: z.string() }))
     .query(({ input }) => {
       return { greeting: `Hello ${input.name}!` };
+    }),
+
+  getStatus: t.procedure
+    .meta({ /* 👉 */ openapi: { method: 'GET', path: '/status' } })
+    .output(z.object({ status: z.string() }))
+    .query(() => {
+      return { status: 'healthy' };
     });
 });
 ```
@@ -70,27 +74,34 @@ export const appRouter = t.router({
 **4. Generate an OpenAPI document.**
 
 ```typescript
-import { generateOpenApiDocument } from 'trpc-openapi';
+import { generateOpenApiDocument } from 'trpc-to-openapi';
 
 import { appRouter } from '../appRouter';
+import { UserSchema, ProductSchema } from '../schemas';
 
 /* 👇 */
 export const openApiDocument = generateOpenApiDocument(appRouter, {
   title: 'tRPC OpenAPI',
   version: '1.0.0',
   baseUrl: 'http://localhost:3000',
+  defs: {
+    UserSchema,
+    ProductSchema,
+  },
 });
 ```
 
-**5. Add an `trpc-openapi` handler to your app.**
+**5. Add an `trpc-to-openapi` handler to your app.**
 
-We currently support adapters for [`Express`](http://expressjs.com/), [`Next.js`](https://nextjs.org/), [`Serverless`](https://www.serverless.com/), [`Fastify`](https://www.fastify.io/), [`Nuxt`](https://nuxtjs.org/) & [`Node:HTTP`](https://nodejs.org/api/http.html).
+We currently support adapters for [`Express`](http://expressjs.com/), [`Next.js`](https://nextjs.org/), [`Fastify`](https://www.fastify.io/), [`Nuxt`](https://nuxtjs.org/) & [`Node:HTTP`](https://nodejs.org/api/http.html).
 
 [`Fetch`](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API), [`Cloudflare Workers`](https://workers.cloudflare.com/) & more soon™, PRs are welcomed 🙌.
 
+No support for AWS lambdas
+
 ```typescript
 import http from 'http';
-import { createOpenApiHttpHandler } from 'trpc-openapi';
+import { createOpenApiHttpHandler } from 'trpc-to-openapi';
 
 import { appRouter } from '../appRouter';
 
@@ -103,22 +114,29 @@ server.listen(3000);
 
 ```typescript
 // client.ts
-const res = await fetch('http://localhost:3000/say-hello?name=James', { method: 'GET' });
-const body = await res.json(); /* { greeting: 'Hello James!' } */
+const res = await fetch('http://localhost:3000/say-hello?name=OpenAPI', { method: 'GET' });
+const body = await res.json(); /* { greeting: 'Hello OpenAPI!' } */
+
+const statusRes = await fetch('http://localhost:3000/status', { method: 'GET' });
+const statusBody = await statusRes.json(); /* { status: 'healthy' } */
 ```
 
 ## Requirements
 
 Peer dependencies:
 
-- [`tRPC`](https://github.com/trpc/trpc) Server v10 (`@trpc/server`) must be installed.
-- [`Zod`](https://github.com/colinhacks/zod) v3 (`zod@^3.14.4`) must be installed (recommended `^3.20.0`).
+- [`tRPC`](https://github.com/trpc/trpc) Server v11 (`@trpc/server`) must be installed.
+- [`Zod`](https://github.com/colinhacks/zod) v4 (`zod@^4.0.0`) must be installed.
 
 For a procedure to support OpenAPI the following _must_ be true:
 
+- An `output` parser is present AND uses `Zod` validation.
+- If an `input` parser is present, it must use `Zod` validation.
+- Query `input` parsers (when present) extend `Object<{ [string]: String | Number | BigInt | Date }>` or `Void`.
+- Mutation `input` parsers (when present) extend `Object<{ [string]: AnyType }>` or `Void`.
 - `meta.openapi.method` is `GET`, `POST`, `PATCH`, `PUT` or `DELETE`.
 - `meta.openapi.path` is a string starting with `/`.
-- `meta.openapi.path` parameters exist in `input` parser as `String | Number | BigInt | Date`
+- `meta.openapi.path` parameters (when present) exist in `input` parser as `String | Number | BigInt | Date`
 
 Please note:
 
@@ -128,7 +146,7 @@ Please note:
 
 ## HTTP Requests
 
-Procedures with a `GET`/`DELETE` method will accept inputs via URL `query parameters`. Procedures with a `POST`/`PATCH`/`PUT` method will accept inputs via the `request body` with a `application/json` or `application/x-www-form-urlencoded` content type.
+Procedures with a `GET`/`DELETE` method will accept inputs via URL `query parameters`. Procedures with a `POST`/`PATCH`/`PUT` method will accept inputs via the `request body` with a `application/json` content type.
 
 ### Path parameters
 
@@ -151,10 +169,10 @@ export const appRouter = t.router({
 });
 
 // Client
-const res = await fetch('http://localhost:3000/say-hello/James?greeting=Hello' /* 👈 */, {
+const res = await fetch('http://localhost:3000/say-hello/Lily?greeting=Hello' /* 👈 */, {
   method: 'GET',
 });
-const body = await res.json(); /* { greeting: 'Hello James!' } */
+const body = await res.json(); /* { greeting: 'Hello Lily!' } */
 ```
 
 ### Request body
@@ -172,17 +190,17 @@ export const appRouter = t.router({
 });
 
 // Client
-const res = await fetch('http://localhost:3000/say-hello/James' /* 👈 */, {
+const res = await fetch('http://localhost:3000/say-hello/Lily' /* 👈 */, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ greeting: 'Hello' }),
 });
-const body = await res.json(); /* { greeting: 'Hello James!' } */
+const body = await res.json(); /* { greeting: 'Hello Lily!' } */
 ```
 
 ### Custom headers
 
-Any custom headers can be specified in the `meta.openapi.headers` array, these headers will not be validated on request. Please consider using [Authorization](#authorization) for first-class OpenAPI auth/security support.
+Any custom headers can be specified in the `meta.openapi.requestHeaders` and `meta.openapi.responseHeaders` zod object schema, these headers will not be validated. Please consider using [Authorization](#authorization) for first-class OpenAPI auth/security support.
 
 ## HTTP Responses
 
@@ -202,14 +220,14 @@ Explore a [complete example here](examples/with-nextjs/src/server/router.ts).
 
 ```typescript
 import { TRPCError, initTRPC } from '@trpc/server';
-import { OpenApiMeta } from '@dokploy/trpc-openapi';
+import { OpenApiMeta } from 'trpc-to-openapi';
 
 type User = { id: string; name: string };
 
 const users: User[] = [
   {
     id: 'usr_123',
-    name: 'James',
+    name: 'Lily',
   },
 ];
 
@@ -247,7 +265,7 @@ const res = await fetch('http://localhost:3000/say-hello', {
   method: 'GET',
   headers: { Authorization: 'Bearer usr_123' } /* 👈 */,
 });
-const body = await res.json(); /* { greeting: 'Hello James!' } */
+const body = await res.json(); /* { greeting: 'Hello Lily!' } */
 ```
 
 ## Examples
@@ -261,7 +279,7 @@ Please see [full example here](examples/with-express).
 ```typescript
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import express from 'express';
-import { createOpenApiExpressMiddleware } from 'trpc-openapi';
+import { createOpenApiExpressMiddleware } from 'trpc-to-openapi';
 
 import { appRouter } from '../appRouter';
 
@@ -273,29 +291,51 @@ app.use('/api', createOpenApiExpressMiddleware({ router: appRouter })); /* 👈 
 app.listen(3000);
 ```
 
-#### With Next.js
+#### With Next.js app router
+
+Please see [full example here](examples/with-nextjs-appdir).
+
+```typescript
+// src/app/[...trpc]/route.ts
+import { appRouter } from '~/server/api/root';
+import { createContext } from '~/server/api/trpc';
+import { type NextRequest } from 'next/server';
+import { createOpenApiFetchHandler } from 'trpc-to-openapi';
+
+export const dynamic = 'force-dynamic';
+
+const handler = (req: NextRequest) => {
+  // Handle incoming OpenAPI requests
+  return createOpenApiFetchHandler({
+    endpoint: '/',
+    router: appRouter,
+    createContext: () => createContext(req),
+    req,
+  });
+};
+
+export {
+  handler as GET,
+  handler as POST,
+  handler as PUT,
+  handler as PATCH,
+  handler as DELETE,
+  handler as OPTIONS,
+  handler as HEAD,
+};
+```
+
+#### With Next.js pages router
 
 Please see [full example here](examples/with-nextjs).
 
 ```typescript
 // pages/api/[...trpc].ts
-import { createOpenApiNextHandler } from 'trpc-openapi';
+import { createOpenApiNextHandler } from 'trpc-to-openapi';
 
 import { appRouter } from '../../server/appRouter';
 
 export default createOpenApiNextHandler({ router: appRouter });
-```
-
-#### With AWS Lambda
-
-Please see [full example here](examples/with-serverless).
-
-```typescript
-import { createOpenApiAwsLambdaHandler } from 'trpc-openapi';
-
-import { appRouter } from './appRouter';
-
-export const openApi = createOpenApiAwsLambdaHandler({ router: appRouter });
 ```
 
 #### With Fastify
@@ -305,7 +345,7 @@ Please see [full example here](examples/with-fastify).
 ```typescript
 import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify';
 import Fastify from 'fastify';
-import { fastifyTRPCOpenApiPlugin } from 'trpc-openapi';
+import { fastifyTRPCOpenApiPlugin } from 'trpc-to-openapi';
 
 import { appRouter } from './router';
 
@@ -327,34 +367,36 @@ main();
 
 Please see [full typings here](src/generator/index.ts).
 
-| Property          | Type                                   | Description                                             | Required |
-| ----------------- | -------------------------------------- | ------------------------------------------------------- | -------- |
-| `title`           | `string`                               | The title of the API.                                   | `true`   |
-| `description`     | `string`                               | A short description of the API.                         | `false`  |
-| `version`         | `string`                               | The version of the OpenAPI document.                    | `true`   |
-| `baseUrl`         | `string`                               | The base URL of the target server.                      | `true`   |
-| `docsUrl`         | `string`                               | A URL to any external documentation.                    | `false`  |
-| `tags`            | `string[]`                             | A list for ordering endpoint groups.                    | `false`  |
-| `securitySchemes` | `Record<string, SecuritySchemeObject>` | Defaults to `Authorization` header with `Bearer` scheme | `false`  |
+| Property          | Type                                                                                       | Description                                                                                 | Required |
+| ----------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- | -------- |
+| `title`           | `string`                                                                                   | The title of the API.                                                                       | `true`   |
+| `description`     | `string`                                                                                   | A short description of the API.                                                             | `false`  |
+| `version`         | `string`                                                                                   | The version of the OpenAPI document.                                                        | `true`   |
+| `baseUrl`         | `string`                                                                                   | The base URL of the target server.                                                          | `true`   |
+| `docsUrl`         | `string`                                                                                   | A URL to any external documentation.                                                        | `false`  |
+| `tags`            | `string[]`                                                                                 | A list for ordering endpoint groups.                                                        | `false`  |
+| `securitySchemes` | `Record<string, SecuritySchemeObject>`                                                     | Defaults to `Authorization` header with `Bearer` scheme                                     | `false`  |
+| `filter`          | `(ctx: { metadata: { openapi: NonNullable<OpenApiMeta['openapi']> } & TMeta }) => boolean` | Optional filter function to include/exclude procedures from the generated OpenAPI document. | `false`  |
 
 #### OpenApiMeta
 
 Please see [full typings here](src/types.ts).
 
-| Property       | Type                | Description                                                                                          | Required | Default                |
-| -------------- | ------------------- | ---------------------------------------------------------------------------------------------------- | -------- | ---------------------- |
-| `enabled`      | `boolean`           | Exposes this procedure to `trpc-openapi` adapters and on the OpenAPI document.                       | `false`  | `true`                 |
-| `override`     | `boolean`           | Overrides the default value of the parameter.                                                        | `false`  | `false`                |
-| `additional`   | `boolean`           | Adds the parameter to the default value of the parameter.
-| `method`       | `HttpMethod`        | HTTP method this endpoint is exposed on. Value can be `GET`, `POST`, `PATCH`, `PUT` or `DELETE`.     | `true`   | `undefined`            |
-| `path`         | `string`            | Pathname this endpoint is exposed on. Value must start with `/`, specify path parameters using `{}`. | `true`   | `undefined`            |
-| `protect`      | `boolean`           | Requires this endpoint to use a security scheme.                                                     | `false`  | `false`                |
-| `summary`      | `string`            | A short summary of the endpoint included in the OpenAPI document.                                    | `false`  | `undefined`            |
-| `description`  | `string`            | A verbose description of the endpoint included in the OpenAPI document.                              | `false`  | `undefined`            |
-| `tags`         | `string[]`          | A list of tags used for logical grouping of endpoints in the OpenAPI document.                       | `false`  | `undefined`            |
-| `headers`      | `ParameterObject[]` | An array of custom headers to add for this endpoint in the OpenAPI document.                         | `false`  | `undefined`            |
-| `contentTypes` | `ContentType[]`     | A set of content types specified as accepted in the OpenAPI document.                                | `false`  | `['application/json']` |
-| `deprecated`   | `boolean`           | Whether or not to mark an endpoint as deprecated                                                     | `false`  | `false`                |
+| Property             | Type                                    | Description                                                                                                                    | Required | Default                 |
+| -------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | -------- | ----------------------- |
+| `enabled`            | `boolean`                               | Exposes this procedure to `trpc-to-openapi` adapters and on the OpenAPI document.                                              | `false`  | `true`                  |
+| `method`             | `HttpMethod`                            | HTTP method this endpoint is exposed on. Value can be `GET`, `POST`, `PATCH`, `PUT` or `DELETE`.                               | `true`   | `undefined`             |
+| `path`               | `string`                                | Pathname this endpoint is exposed on. Value must start with `/`, specify path parameters using `{}`.                           | `true`   | `undefined`             |
+| `protect`            | `boolean`                               | Requires this endpoint to use a security scheme.                                                                               | `false`  | `true`                  |
+| `summary`            | `string`                                | A short summary of the endpoint included in the OpenAPI document.                                                              | `false`  | `undefined`             |
+| `description`        | `string`                                | A verbose description of the endpoint included in the OpenAPI document.                                                        | `false`  | `undefined`             |
+| `tags`               | `string[]`                              | A list of tags used for logical grouping of endpoints in the OpenAPI document.                                                 | `false`  | `undefined`             |
+| `requestHeaders`     | `AnyZodObject`                          | A zod object schema describing any custom headers to add to the request for this endpoint in the OpenAPI document.             | `false`  | `undefined`             |
+| `responseHeaders`    | `AnyZodObject`                          | A zod object schema describing any custom headers to add to the response for this endpoint in the OpenAPI document.            | `false`  | `undefined`             |
+| `successDescription` | `string`                                | A string to use as the description for a successful response.                                                                  | `false`  | `'Successful response'` |
+| `errorResponses`     | `number[] \| { [key: number]: string }` | A list of error response codes or an object of response codes and their description to add to the responses for this endpoint. | `false`  | `undefined`             |
+| `contentTypes`       | `OpenApiContentType[]`                  | A set of content types specified as accepted in the OpenAPI document.                                                          | `false`  | `['application/json']`  |
+| `deprecated`         | `boolean`                               | Whether or not to mark an endpoint as deprecated                                                                               | `false`  | `false`                 |
 
 #### CreateOpenApiNodeHttpHandlerOptions
 
@@ -370,13 +412,49 @@ Please see [full typings here](src/adapters/node-http/core.ts).
 
 ---
 
-_Still using tRPC v9? See our [`.interop()`](examples/with-interop) example._
-
 ## License
 
 Distributed under the MIT License. See LICENSE for more information.
 
-## Contact
+**Filtering Procedures in OpenAPI Output**
 
-James Berry - Follow me on Twitter [@jlalmes](https://twitter.com/jlalmes) 💚
-# trpc-openapi
+You can use the `filter` option to selectively include or exclude procedures from the generated OpenAPI document. The filter function receives a context object with the procedure's metadata. Return `true` to include the procedure, or `false` to exclude it.
+
+**Example:**
+
+```typescript
+const appRouter = t.router({
+  publicProc: t.procedure
+    .meta({ openapi: { method: 'GET', path: '/public' }, isPublic: true })
+    .input(z.object({}))
+    .output(z.object({ result: z.string() }))
+    .query(() => ({ result: 'public' })),
+  privateProc: t.procedure
+    .meta({ openapi: { method: 'GET', path: '/private' }, isPublic: false })
+    .input(z.object({}))
+    .output(z.object({ result: z.string() }))
+    .query(() => ({ result: 'private' })),
+});
+
+// Only include procedures where isPublic is true
+const openApiDocument = generateOpenApiDocument(appRouter, {
+  ...defaultDocOpts,
+  filter: ({ metadata }) => metadata.isPublic === true,
+});
+
+// openApiDocument.paths will only include '/public'
+```
+
+You can also pass a metadata generic to `generateOpenApiDocument` to get proper types for your custom metadata in the filter function:
+
+```typescript
+// Define your custom metadata type
+interface MyMeta {
+  isPublic: boolean;
+}
+
+const openApiDocument = generateOpenApiDocument<MyMeta>(appRouter, {
+  ...defaultDocOpts,
+  filter: ({ metadata }) => metadata.isPublic === true,
+});
+```

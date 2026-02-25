@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import cors from 'nextjs-cors';
-import { createOpenApiNextHandler } from 'trpc-openapi';
+import { createOpenApiNextHandler } from 'trpc-to-openapi';
 
 import { appRouter, createContext } from '../../server/router';
 

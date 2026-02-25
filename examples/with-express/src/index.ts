@@ -3,7 +3,7 @@ import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import cors from 'cors';
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
-import { createOpenApiExpressMiddleware } from 'trpc-openapi';
+import { createOpenApiExpressMiddleware } from 'trpc-to-openapi';
 
 import { openApiDocument } from './openapi';
 import { appRouter, createContext } from './router';

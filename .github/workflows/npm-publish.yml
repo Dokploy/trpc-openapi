@@ -1,0 +1,66 @@
+name: NPM Publish
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          registry-url: "https://registry.npmjs.org"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check if version is publishable
+        id: check_version
+        run: |
+          LOCAL_VERSION=$(node -p "require('./package.json').version")
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          NPM_VERSION=$(npm view "$PACKAGE_NAME" version 2>/dev/null || echo "0.0.0")
+
+          echo "Local version: $LOCAL_VERSION"
+          echo "NPM version: $NPM_VERSION"
+
+          if [ "$LOCAL_VERSION" != "$NPM_VERSION" ] && [ "$(printf '%s\n' "$NPM_VERSION" "$LOCAL_VERSION" | sort -V | head -n 1)" = "$NPM_VERSION" ]; then
+            echo "Version $LOCAL_VERSION is greater than $NPM_VERSION. Preparing to publish."
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Version $LOCAL_VERSION is not greater than $NPM_VERSION. Skipping publish."
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build package
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm run build
+
+      - name: Publish to NPM
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm publish --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Final Status
+        if: always()
+        run: |
+          if [[ '${{ steps.check_version.outputs.should_publish }}' == 'true' ]]; then
+            echo "Publish process completed."
+          else
+            echo "No new version to publish."
+          fi

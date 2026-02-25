@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-types */
 import { initTRPC } from '@trpc/server';
 import express from 'express';
 import fetch from 'node-fetch';
@@ -79,11 +78,10 @@ describe('express adapter', () => {
     });
 
     {
-      const res = await fetch(`${url}/say-hello?name=James`, { method: 'GET' });
-      const body = await res.json();
+      const res = await fetch(`${url}/say-hello?name=Lily`, { method: 'GET' });
 
       expect(res.status).toBe(200);
-      expect(body).toEqual({ greeting: 'Hello James!' });
+      expect(await res.json()).toEqual({ greeting: 'Hello Lily!' });
       expect(createContextMock).toHaveBeenCalledTimes(1);
       expect(responseMetaMock).toHaveBeenCalledTimes(1);
       expect(onErrorMock).toHaveBeenCalledTimes(0);
@@ -94,12 +92,11 @@ describe('express adapter', () => {
       const res = await fetch(`${url}/say-hello`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'James' }),
+        body: JSON.stringify({ name: 'Lily' }),
       });
-      const body = await res.json();
 
       expect(res.status).toBe(200);
-      expect(body).toEqual({ greeting: 'Hello James!' });
+      expect(await res.json()).toEqual({ greeting: 'Hello Lily!' });
       expect(createContextMock).toHaveBeenCalledTimes(1);
       expect(responseMetaMock).toHaveBeenCalledTimes(1);
       expect(onErrorMock).toHaveBeenCalledTimes(0);
@@ -107,11 +104,10 @@ describe('express adapter', () => {
       clearMocks();
     }
     {
-      const res = await fetch(`${url}/say/hello?name=James`, { method: 'GET' });
-      const body = await res.json();
+      const res = await fetch(`${url}/say/hello?name=Lily`, { method: 'GET' });
 
       expect(res.status).toBe(200);
-      expect(body).toEqual({ greeting: 'Hello James!' });
+      expect(await res.json()).toEqual({ greeting: 'Hello Lily!' });
       expect(createContextMock).toHaveBeenCalledTimes(1);
       expect(responseMetaMock).toHaveBeenCalledTimes(1);
       expect(onErrorMock).toHaveBeenCalledTimes(0);
@@ -125,7 +121,7 @@ describe('express adapter', () => {
       echo: t.procedure
         .meta({ openapi: { method: 'GET', path: '/echo' } })
         .input(z.object({ payload: z.string() }))
-        .output(z.object({ payload: z.string(), context: z.undefined() }))
+        .output(z.object({ payload: z.string() }))
         .query(({ input }) => ({ payload: input.payload })),
     });
 
@@ -134,12 +130,11 @@ describe('express adapter', () => {
       { basePath: '/open-api' },
     );
 
-    const res = await fetch(`${url}/open-api/echo?payload=jlalmes`, { method: 'GET' });
-    const body = await res.json();
+    const res = await fetch(`${url}/open-api/echo?payload=mcampa`, { method: 'GET' });
 
     expect(res.status).toBe(200);
-    expect(body).toEqual({
-      payload: 'jlalmes',
+    expect(await res.json()).toEqual({
+      payload: 'mcampa',
     });
     expect(createContextMock).toHaveBeenCalledTimes(1);
     expect(responseMetaMock).toHaveBeenCalledTimes(1);

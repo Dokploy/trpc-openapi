@@ -1,10 +1,7 @@
 import { Request, Response } from 'express';
 
 import { OpenApiRouter } from '../types';
-import {
-  CreateOpenApiNodeHttpHandlerOptions,
-  createOpenApiNodeHttpHandler,
-} from './node-http/core';
+import { CreateOpenApiNodeHttpHandlerOptions, createOpenApiNodeHttpHandler } from './node-http';
 
 export type CreateOpenApiExpressMiddlewareOptions<TRouter extends OpenApiRouter> =
   CreateOpenApiNodeHttpHandlerOptions<TRouter, Request, Response>;

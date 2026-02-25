@@ -1,0 +1,22 @@
+{
+  "name": "with-nuxtjs",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "prepare": "nuxt prepare"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "nuxt": "3.19.3"
+  },
+  "dependencies": {
+    "@trpc/server": "^11.1.0",
+    "trpc-nuxt": "1.2.0",
+    "trpc-to-openapi": "workspace:*",
+    "zod": "^4.0.0",
+    "zod-openapi": "5.4.2"
+  }
+}
