@@ -1,6 +1,6 @@
 {
   "name": "@dokploy/trpc-openapi",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "description": "tRPC OpenAPI",
   "author": "dokploy",
   "private": false,
@@ -40,7 +40,7 @@
   },
   "peerDependencies": {
     "@trpc/server": "^11.1.0",
-    "zod": "^4.0.0",
+    "zod": "^4.3.6",
     "zod-openapi": "^5.0.1"
   },
   "dependencies": {

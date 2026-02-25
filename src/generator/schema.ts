@@ -130,18 +130,31 @@ export const getRequestBodyObject = (
   pathParameters: string[],
   contentTypes: OpenApiContentType[],
 ): ZodOpenApiRequestBodyObject | undefined => {
-  // remove path parameters
   const mask: Record<string, true> = {};
   pathParameters.forEach((pathParameter) => {
     mask[pathParameter] = true;
   });
   const o = schema.meta();
-  const dedupedSchema = schema.omit(mask).meta({
-    ...(o?.title ? { title: o?.title } : {}),
-    ...(o?.description ? { description: o?.description } : {}),
-    ...(o?.examples ? { examples: o?.examples } : {}),
-  });
-  // if all keys are path parameters
+  let dedupedSchema: z.ZodObject<z.ZodRawShape>;
+  try {
+    dedupedSchema = schema.omit(mask).meta({
+      ...(o?.title ? { title: o?.title } : {}),
+      ...(o?.description ? { description: o?.description } : {}),
+      ...(o?.examples ? { examples: o?.examples } : {}),
+    });
+  } catch {
+    // Zod 4: .omit() throws on object schemas containing refinements; build body schema from shape
+    const shape = schema.shape as Record<string, z.ZodTypeAny>;
+    const bodyShape: Record<string, z.ZodTypeAny> = {};
+    for (const key of Object.keys(shape)) {
+      if (!mask[key] && shape[key]) bodyShape[key] = shape[key];
+    }
+    dedupedSchema = z.object(bodyShape).meta({
+      ...(o?.title ? { title: o?.title } : {}),
+      ...(o?.description ? { description: o?.description } : {}),
+      ...(o?.examples ? { examples: o?.examples } : {}),
+    });
+  }
   if (pathParameters.length > 0 && Object.keys(dedupedSchema.shape).length === 0) {
     return undefined;
   }
