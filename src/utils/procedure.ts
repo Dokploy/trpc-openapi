@@ -70,7 +70,7 @@ export const forEachOpenApiProcedure = <TMeta = Record<string, unknown>>(
 
     const defaultOpenApiMeta: NonNullable<OpenApiMeta['openapi']> = {
       method: getMethod(procedure as OpenApiProcedure),
-      path: `/${path.replace(/\./g, '/')}`,
+      path: `/${path}`,
       enabled: true,
       tags: [path.split('.')[0] ?? 'default'],
       protect: true,

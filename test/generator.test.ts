@@ -58,6 +58,23 @@ describe('generator', () => {
     `);
   });
 
+  test('default path uses dot notation not slash-separated (e.g. /admin.setupMonitoring)', () => {
+    const appRouter = t.router({
+      application: t.router({
+        create: t.procedure
+          .input(z.object({ name: z.string() }))
+          .output(z.object({ id: z.string() }))
+          .mutation(() => ({ id: '1' })),
+      }),
+    });
+
+    const document = generateOpenApiDocument(appRouter, defaultDocOpts);
+
+    expect(document.paths).toBeDefined();
+    expect(document.paths!['/application.create']?.post).toBeDefined();
+    expect(document.paths!['/application/create']).toBeUndefined();
+  });
+
   test('with missing input', () => {
     {
       const appRouter = t.router({
@@ -3101,7 +3118,7 @@ describe('generator', () => {
         (openApiDocument.paths!['/with-all']!.post!.requestBody as any).content['application/json'],
       ).toEqual(
         (openApiDocument.paths!['/with-all']!.post!.requestBody as any).content[
-          'application/x-www-form-urlencoded'
+        'application/x-www-form-urlencoded'
         ],
       );
       expect(

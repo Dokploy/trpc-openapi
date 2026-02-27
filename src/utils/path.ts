@@ -7,6 +7,7 @@ export const getPathParameters = (path: string): string[] => {
 };
 
 export const getPathRegExp = (path: string) => {
-  const groupedExp = path.replace(/\{(.+?)\}/g, (_, key: string) => `(?<${key}>[^/]+)`);
+  const escapedPath = path.replace(/\./g, '\\.');
+  const groupedExp = escapedPath.replace(/\{(.+?)\}/g, (_, key: string) => `(?<${key}>[^/]+)`);
   return new RegExp(`^${groupedExp}$`, 'i');
 };

@@ -371,6 +371,42 @@ describe('fetch adapter', () => {
     }
   });
 
+  test('procedure without explicit path is reachable at dot-notation URL (e.g. /admin.setupMonitoring)', async () => {
+    const appRouter = t.router({
+      application: t.router({
+        create: t.procedure
+          .input(z.object({ name: z.string() }))
+          .output(z.object({ id: z.string() }))
+          .mutation(() => ({ id: '1' })),
+      }),
+    });
+
+    const reqDot = new Request('https://localhost:3000/application.create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'test' }),
+    });
+    const resDot = await createFetchHandlerCaller({
+      router: appRouter,
+      endpoint: '/',
+      req: reqDot,
+    });
+    expect(resDot.status).toBe(200);
+    expect(await resDot.json()).toEqual({ id: '1' });
+
+    const reqSlash = new Request('https://localhost:3000/application/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'test' }),
+    });
+    const resSlash = await createFetchHandlerCaller({
+      router: appRouter,
+      endpoint: '/',
+      req: reqSlash,
+    });
+    expect(resSlash.status).toBe(404);
+  });
+
   test('with void input', async () => {
     const appRouter = t.router({
       pingQuery: t.procedure
